@@ -1,42 +1,29 @@
+// استيراد مكتبات Firebase
 import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-import { getFirestore, collection, addDoc, getDocs, deleteDoc, doc, updateDoc } 
+import { getFirestore, collection, getDocs, deleteDoc, doc, updateDoc } 
 from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
+// بيانات الاتصال بمشروعك
 const firebaseConfig = {
-    apiKey: "API_KEY",
-    authDomain: "PROJECT_ID.firebaseapp.com",
-    projectId: "PROJECT_ID",
-    storageBucket: "PROJECT_ID.appspot.com",
-    messagingSenderId: "SENDER_ID",
-    appId: "APP_ID"
+  apiKey: "AIzaSyCEDOqcalrRXDXG-Gkipms2fkkTLw2KUEQ",
+  authDomain: "ssss-b11c6.firebaseapp.com",
+  projectId: "ssss-b11c6",
+  storageBucket: "ssss-b11c6.firebasestorage.app",
+  messagingSenderId: "1011926445138",
+  appId: "1:1011926445138:web:aa35bf90712edb1e75838b",
+  measurementId: "G-CXJ122PY8J"
 };
 
+// تهيئة التطبيق وقاعدة البيانات
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 
-async function addData() {
-    let name = document.getElementById("name").value;
-    let email = document.getElementById("email").value;
-    let username = document.getElementById("username").value;
-    let password = document.getElementById("password").value;
-
-    if (name && email && username && password) {
-        await addDoc(collection(db, "users"), {
-            name,
-            email,
-            username,
-            password,
-            blocked: false
-        });
-        loadData();
-    }
-}
-
+// تحميل بيانات العملاء من Firestore
 async function loadData() {
     const table = document.getElementById("dataTable");
     table.innerHTML = "";
 
-    const querySnapshot = await getDocs(collection(db, "users"));
+    const querySnapshot = await getDocs(collection(db, "users")); // يفترض أن العملاء موجودين في collection اسمها users
     querySnapshot.forEach((docSnap) => {
         const data = docSnap.data();
         const row = `
@@ -45,25 +32,30 @@ async function loadData() {
                 <td>${data.email}</td>
                 <td>${data.username}</td>
                 <td>${data.blocked ? "🚫 محظور" : "✅ نشط"}</td>
-                <td><button class="action-btn edit-btn" onclick="editData('${docSnap.id}', '${data.name}', '${data.email}', '${data.username}', '${data.password}')">✏️</button></td>
+                <td><button class="action-btn edit-btn" onclick="editData('${docSnap.id}', '${data.name}', '${data.email}', '${data.username}', '${data.password}')">✏️ تعديل</button></td>
                 <td><button class="action-btn block-btn" onclick="blockUser('${docSnap.id}', ${data.blocked})">${data.blocked ? "إلغاء الحظر" : "حظر"}</button></td>
-                <td><button class="action-btn delete-btn" onclick="deleteData('${docSnap.id}')">🗑️</button></td>
+                <td><button class="action-btn delete-btn" onclick="deleteData('${docSnap.id}')">🗑️ حذف</button></td>
             </tr>
         `;
         table.innerHTML += row;
     });
 }
 
+// حذف عميل
 window.deleteData = async function(id) {
-    await deleteDoc(doc(db, "users", id));
-    loadData();
+    if (confirm("هل أنت متأكد من الحذف؟")) {
+        await deleteDoc(doc(db, "users", id));
+        loadData();
+    }
 }
 
+// حظر / إلغاء حظر عميل
 window.blockUser = async function(id, currentStatus) {
     await updateDoc(doc(db, "users", id), { blocked: !currentStatus });
     loadData();
 }
 
+// تعديل بيانات عميل
 window.editData = async function(id, name, email, username, password) {
     let newName = prompt("الاسم الجديد:", name);
     let newEmail = prompt("الإيميل الجديد:", email);
@@ -81,4 +73,5 @@ window.editData = async function(id, name, email, username, password) {
     }
 }
 
+// تشغيل تحميل البيانات عند فتح الصفحة
 loadData();
