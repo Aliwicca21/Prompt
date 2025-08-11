@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>لوحة التحكم</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <h1>📊 لوحة التحكم</h1>
+
+    <div class="form-container">
+        <input type="text" id="name" placeholder="الاسم">
+        <input type="text" id="email" placeholder="الإيميل">
+        <input type="text" id="username" placeholder="اسم المستخدم">
+        <input type="password" id="password" placeholder="كلمة السر">
+        <button onclick="addData()">إضافة</button>
+    </div>
+
+    <table>
+        <thead>
+            <tr>
+                <th>الاسم</th>
+                <th>الإيميل</th>
+                <th>اسم المستخدم</th>
+                <th>الحالة</th>
+                <th>تعديل</th>
+                <th>حظر</th>
+                <th>حذف</th>
+            </tr>
+        </thead>
+        <tbody id="dataTable"></tbody>
+    </table>
+
+    <script type="module" src="script.js"></script>
+</body>
+</html>
