@@ -5,22 +5,51 @@
   <meta name="viewport" content="width=device-width, initial-scale=1" />
   <title>عرض بيانات المستخدمين</title>
   <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      text-align: center;
+      padding: 20px;
+    }
     table {
       border-collapse: collapse;
-      width: 80%;
+      width: 90%;
       margin: 20px auto;
     }
     th, td {
-      border: 1px solid #999;
+      border: 1px solid #444;
       padding: 8px 12px;
-      text-align: center;
     }
     th {
       background-color: #eee;
     }
+    #message {
+      margin: 15px auto;
+      color: red;
+      font-weight: bold;
+    }
   </style>
+</head>
+<body>
+  <h1>قائمة المستخدمين</h1>
+  <div id="message"></div>
+  <table>
+    <thead>
+      <tr>
+        <th>معرف المستخدم (UID)</th>
+        <th>اسم المستخدم</th>
+        <th>البريد الإلكتروني</th>
+        <th>تاريخ الإنشاء</th>
+      </tr>
+    </thead>
+    <tbody id="usersBody">
+      <!-- البيانات هنا -->
+    </tbody>
+  </table>
+
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-app.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-auth.js";
     import { getFirestore, collection, getDocs } from "https://www.gstatic.com/firebasejs/9.22.2/firebase-firestore.js";
 
     const firebaseConfig = {
@@ -35,59 +64,76 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
-    window.addEventListener('DOMContentLoaded', async () => {
-      const usersTableBody = document.getElementById('usersTableBody');
+    const messageEl = document.getElementById("message");
+    const usersBody = document.getElementById("usersBody");
 
-      try {
-        const querySnapshot = await getDocs(collection(db, "users"));
-        querySnapshot.forEach((doc) => {
-          const user = doc.data();
-          const tr = document.createElement('tr');
+    // دالة لتحويل Timestamp إلى نص عربي مقروء
+    function formatTimestamp(ts) {
+      if (!ts || !ts.toDate) return "";
+      const date = ts.toDate();
+      return date.toLocaleString("ar-EG", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+      });
+    }
 
-          const tdUid = document.createElement('td');
-          tdUid.textContent = doc.id;
-          tr.appendChild(tdUid);
+    onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        messageEl.textContent = "جاري تحميل بيانات المستخدمين...";
+        usersBody.innerHTML = "";
 
-          const tdUsername = document.createElement('td');
-          tdUsername.textContent = user.username || '';
-          tr.appendChild(tdUsername);
+        try {
+          const querySnapshot = await getDocs(collection(db, "users"));
 
-          const tdEmail = document.createElement('td');
-          tdEmail.textContent = user.email || '';
-          tr.appendChild(tdEmail);
-
-          const tdCreatedAt = document.createElement('td');
-          if (user.createdAt && user.createdAt.toDate) {
-            tdCreatedAt.textContent = user.createdAt.toDate().toLocaleString();
-          } else {
-            tdCreatedAt.textContent = '';
+          if (querySnapshot.empty) {
+            messageEl.textContent = "لا توجد بيانات مستخدمين لعرضها.";
+            return;
           }
-          tr.appendChild(tdCreatedAt);
 
-          usersTableBody.appendChild(tr);
-        });
-      } catch (error) {
-        alert('خطأ في جلب البيانات: ' + error.message);
+          querySnapshot.forEach(doc => {
+            const data = doc.data();
+
+            const tr = document.createElement("tr");
+
+            // UID
+            const tdUid = document.createElement("td");
+            tdUid.textContent = doc.id;
+            tr.appendChild(tdUid);
+
+            // اسم المستخدم
+            const tdUsername = document.createElement("td");
+            tdUsername.textContent = data.username || "-";
+            tr.appendChild(tdUsername);
+
+            // البريد الإلكتروني
+            const tdEmail = document.createElement("td");
+            tdEmail.textContent = data.email || "-";
+            tr.appendChild(tdEmail);
+
+            // تاريخ الإنشاء
+            const tdCreated = document.createElement("td");
+            tdCreated.textContent = formatTimestamp(data.createdAt);
+            tr.appendChild(tdCreated);
+
+            usersBody.appendChild(tr);
+          });
+
+          messageEl.textContent = "";
+
+        } catch (error) {
+          messageEl.textContent = "خطأ في جلب البيانات: " + error.message;
+        }
+      } else {
+        messageEl.textContent = "يرجى تسجيل الدخول أولاً لعرض المستخدمين.";
+        usersBody.innerHTML = "";
       }
     });
   </script>
-</head>
-<body>
-  <h2 style="text-align:center;">قائمة المستخدمين</h2>
-  <table>
-    <thead>
-      <tr>
-        <th>معرف المستخدم (UID)</th>
-        <th>اسم المستخدم</th>
-        <th>البريد الإلكتروني</th>
-        <th>تاريخ الإنشاء</th>
-      </tr>
-    </thead>
-    <tbody id="usersTableBody">
-      <!-- البيانات تظهر هنا -->
-    </tbody>
-  </table>
 </body>
 </html>
