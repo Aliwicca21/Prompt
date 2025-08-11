@@ -1,29 +1,183 @@
 <!DOCTYPE html>
 <html lang="ar">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>قائمة العملاء</title>
-    <link rel="stylesheet" href="style.css">
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>لوحة تحكم العملاء</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      direction: rtl;
+      padding: 20px;
+      background-color: #f5f8fa;
+    }
+    h2 {
+      color: #333;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin-top: 20px;
+      background: white;
+      box-shadow: 0 0 10px #ccc;
+    }
+    th, td {
+      padding: 12px 15px;
+      border: 1px solid #ddd;
+      text-align: center;
+    }
+    th {
+      background-color: #357ABD;
+      color: white;
+    }
+    button {
+      padding: 6px 12px;
+      margin: 0 2px;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      color: white;
+      font-weight: 600;
+    }
+    .btn-edit { background-color: #4CAF50; }
+    .btn-delete { background-color: #f44336; }
+    .btn-block { background-color: #ff9800; }
+  </style>
 </head>
 <body>
-    <h1>📋 قائمة العملاء</h1>
 
-    <table>
-        <thead>
-            <tr>
-                <th>الاسم</th>
-                <th>الإيميل</th>
-                <th>اسم المستخدم</th>
-                <th>الحالة</th>
-                <th>تعديل</th>
-                <th>حظر</th>
-                <th>حذف</th>
-            </tr>
-        </thead>
-        <tbody id="dataTable"></tbody>
-    </table>
+<h2>بيانات العملاء</h2>
 
-    <script type="module" src="script.js"></script>
+<table id="users-table">
+  <thead>
+    <tr>
+      <th>البريد الإلكتروني</th>
+      <th>تاريخ الإنشاء</th>
+      <th>الحالة</th>
+      <th>الإجراءات</th>
+    </tr>
+  </thead>
+  <tbody>
+    <!-- البيانات هتتحط هنا -->
+  </tbody>
+</table>
+
+<script type="module">
+  import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+  import { getFirestore, collection, getDocs, doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+  const firebaseConfig = {
+    apiKey: "AIzaSyCEDOqcalrRXDXG-Gkipms2fkkTLw2KUEQ",
+    authDomain: "ssss-b11c6.firebaseapp.com",
+    projectId: "ssss-b11c6",
+    storageBucket: "ssss-b11c6.firebasestorage.app",
+    messagingSenderId: "1011926445138",
+    appId: "1:1011926445138:web:aa35bf90712edb1e75838b",
+    measurementId: "G-CXJ122PY8J"
+  };
+
+  const app = initializeApp(firebaseConfig);
+  const db = getFirestore(app);
+
+  const usersTableBody = document.querySelector("#users-table tbody");
+
+  // جلب بيانات المستخدمين وعرضهم
+  async function fetchUsers() {
+    usersTableBody.innerHTML = "جارٍ التحميل...";
+    try {
+      const querySnapshot = await getDocs(collection(db, "users"));
+      usersTableBody.innerHTML = "";
+      querySnapshot.forEach(docSnap => {
+        const user = docSnap.data();
+        const tr = document.createElement("tr");
+
+        const createdAt = user.createdAt && user.createdAt.toDate
+          ? user.createdAt.toDate().toLocaleString()
+          : user.createdAt || "غير متوفر";
+
+        const status = user.blocked ? "محظور" : "نشط";
+
+        tr.innerHTML = `
+          <td>${user.email || "غير متوفر"}</td>
+          <td>${createdAt}</td>
+          <td>${status}</td>
+          <td>
+            <button class="btn-edit" data-id="${docSnap.id}">تعديل</button>
+            <button class="btn-delete" data-id="${docSnap.id}">حذف</button>
+            <button class="btn-block" data-id="${docSnap.id}">${user.blocked ? "رفع الحظر" : "حظر"}</button>
+          </td>
+        `;
+
+        usersTableBody.appendChild(tr);
+      });
+
+      addEventListeners();
+    } catch (error) {
+      usersTableBody.innerHTML = `<tr><td colspan="4">حدث خطأ: ${error.message}</td></tr>`;
+    }
+  }
+
+  // إضافة الأحداث لأزرار التعديل والحذف والحظر
+  function addEventListeners() {
+    document.querySelectorAll(".btn-edit").forEach(btn => {
+      btn.onclick = () => editUser(btn.dataset.id);
+    });
+    document.querySelectorAll(".btn-delete").forEach(btn => {
+      btn.onclick = () => deleteUser(btn.dataset.id);
+    });
+    document.querySelectorAll(".btn-block").forEach(btn => {
+      btn.onclick = () => toggleBlockUser(btn.dataset.id);
+    });
+  }
+
+  // تعديل بيانات المستخدم (مثلاً تعديل البريد فقط كمثال)
+  async function editUser(id) {
+    const newEmail = prompt("ادخل البريد الإلكتروني الجديد:");
+    if (!newEmail) return alert("لم يتم إدخال البريد الإلكتروني.");
+
+    try {
+      await updateDoc(doc(db, "users", id), { email: newEmail });
+      alert("تم تحديث البريد الإلكتروني.");
+      fetchUsers();
+    } catch (error) {
+      alert("خطأ في التحديث: " + error.message);
+    }
+  }
+
+  // حذف المستخدم
+  async function deleteUser(id) {
+    if (!confirm("هل أنت متأكد من حذف هذا المستخدم؟")) return;
+
+    try {
+      await deleteDoc(doc(db, "users", id));
+      alert("تم حذف المستخدم.");
+      fetchUsers();
+    } catch (error) {
+      alert("خطأ في الحذف: " + error.message);
+    }
+  }
+
+  // حظر/رفع الحظر عن المستخدم (بتغيير قيمة 'blocked' في الوثيقة)
+  async function toggleBlockUser(id) {
+    try {
+      const userRef = doc(db, "users", id);
+      const docSnap = await userRef.get();
+      let currentBlocked = false;
+
+      if (docSnap.exists()) {
+        currentBlocked = docSnap.data().blocked || false;
+      }
+
+      await updateDoc(userRef, { blocked: !currentBlocked });
+      alert(currentBlocked ? "تم رفع الحظر عن المستخدم" : "تم حظر المستخدم");
+      fetchUsers();
+    } catch (error) {
+      alert("حدث خطأ: " + error.message);
+    }
+  }
+
+  fetchUsers();
+</script>
+
 </body>
 </html>
