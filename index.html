@@ -3,44 +3,12 @@
 <head>
   <meta charset="UTF-8">
   <title>لوحة تحكم المدير</title>
-  <style>
-    body { font-family: Tahoma, Arial; direction: rtl; background: #f4f4f9; margin: 20px; }
-    h2 { text-align: center; color: #333; }
-    #usersTable { width: 100%; border-collapse: collapse; margin-top: 20px; }
-    #usersTable th, #usersTable td {
-      padding: 10px; border: 1px solid #ddd; text-align: center;
-    }
-    #usersTable th { background-color: #0070ba; color: white; }
-    button { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; }
-    .btn-view { background-color: #28a745; color: white; }
-  </style>
-</head>
-<body>
-
-  <h2>📊 لوحة تحكم المدير</h2>
-  <input type="text" id="searchBox" placeholder="ابحث باسم أو إيميل..." style="width:100%;padding:10px;">
-  
-  <table id="usersTable">
-    <thead>
-      <tr>
-        <th>الاسم</th>
-        <th>الإيميل</th>
-        <th>تليجرام</th>
-        <th>الرصيد</th>
-        <th>حالة البوت</th>
-        <th>الإجراءات</th>
-      </tr>
-    </thead>
-    <tbody id="usersBody">
-      <!-- بيانات المستخدمين تظهر هنا -->
-    </tbody>
-  </table>
-
   <script type="module">
+    // 🔹 إعداد Firebase
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
-    import { getFirestore, collection, getDocs, doc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+    import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, collection, getDocs, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
 
-    // 🔹 إعداد Firebase الخاص بيك
     const firebaseConfig = {
       apiKey: "AIzaSyBGFMZtSytIPzF4XYLyA34DpF5q_k-UPL8",
       authDomain: "fir-dba4c.firebaseapp.com",
@@ -52,53 +20,104 @@
     };
 
     const app = initializeApp(firebaseConfig);
+    const auth = getAuth(app);
     const db = getFirestore(app);
 
     const usersBody = document.getElementById("usersBody");
-    const searchBox = document.getElementById("searchBox");
 
-    // 🔹 جلب المستخدمين
+    // التحقق من أن المستخدم مدير
+    onAuthStateChanged(auth, async (user) => {
+      if (!user) {
+        window.location.href = "index.html";
+        return;
+      }
+      const token = await user.getIdTokenResult();
+      if (!token.claims.admin) {
+        alert("ليس لديك صلاحية المدير!");
+        window.location.href = "index.html";
+        return;
+      }
+      loadUsers();
+    });
+
+    // جلب كل المستخدمين
     async function loadUsers() {
-      const querySnapshot = await getDocs(collection(db, "users"));
       usersBody.innerHTML = "";
-
+      const querySnapshot = await getDocs(collection(db, "users"));
       querySnapshot.forEach(docSnap => {
         const user = docSnap.data();
         const row = document.createElement("tr");
         row.innerHTML = `
           <td>${user.username || "-"}</td>
           <td>${user.email || "-"}</td>
-          <td>${user.telegram_id || "-"}</td>
           <td>${user.balance || 0}</td>
+          <td>${user.subscription || "-"}</td>
           <td>${user.botActive ? "✅ مفعل" : "❌ متوقف"}</td>
           <td>
-            <button class="btn-view" onclick="viewUser('${docSnap.id}')">عرض البوت</button>
+            <button onclick="viewUser('${docSnap.id}')">عرض التفاصيل</button>
+            <button onclick="editBalance('${docSnap.id}')">تعديل الرصيد</button>
           </td>
         `;
         usersBody.appendChild(row);
       });
     }
 
-    // 🔹 البحث في الجدول
-    searchBox.addEventListener("keyup", function() {
-      let filter = searchBox.value.toLowerCase();
-      let rows = usersBody.getElementsByTagName("tr");
-      for (let i = 0; i < rows.length; i++) {
-        let cells = rows[i].getElementsByTagName("td");
-        let match = false;
-        for (let j = 0; j < cells.length; j++) {
-          if (cells[j].innerText.toLowerCase().indexOf(filter) > -1) match = true;
+    // عرض تفاصيل المستخدم
+    async function viewUser(uid) {
+      const docRef = doc(db, "users", uid);
+      const docSnap = await getDoc(docRef);
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        let groups = "";
+        if(data.subscriptionGroups){
+          for(const g in data.subscriptionGroups){
+            groups += `- ${g} : ${data.subscriptionGroups[g]} \n`;
+          }
         }
-        rows[i].style.display = match ? "" : "none";
+        alert(`الاسم: ${data.username}\nالإيميل: ${data.email}\nالرصيد: ${data.balance}\nالاشتراك: ${data.subscription}\nحالة البوت: ${data.botActive ? "✅" : "❌"}\nالجروبات:\n${groups || "لا توجد جروبات"}\nIP:\n${JSON.stringify(data.ip || {})}`);
+      } else {
+        alert("المستخدم غير موجود!");
       }
-    });
-
-    // 🔹 فتح صفحة بيانات البوت للمستخدم
-    window.viewUser = function(userId) {
-      window.location.href = `user_bot_view.html?uid=${userId}`;
     }
 
-    loadUsers();
+    // تعديل الرصيد
+    async function editBalance(uid) {
+      const newBalance = prompt("أدخل الرصيد الجديد:");
+      if (newBalance !== null && !isNaN(newBalance)) {
+        const docRef = doc(db, "users", uid);
+        await updateDoc(docRef, { balance: parseFloat(newBalance) });
+        alert("تم تعديل الرصيد بنجاح ✅");
+        loadUsers();
+      }
+    }
+
   </script>
+  <style>
+    body { font-family: Tahoma, Arial; direction: rtl; background: #f4f4f9; margin: 20px; }
+    h2 { text-align: center; color: #333; }
+    #usersTable { width: 100%; border-collapse: collapse; margin-top: 20px; }
+    #usersTable th, #usersTable td {
+      padding: 10px; border: 1px solid #ddd; text-align: center;
+    }
+    #usersTable th { background-color: #0070ba; color: white; }
+    button { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; margin:2px;}
+    button:hover { opacity: 0.8; }
+  </style>
+</head>
+<body>
+  <h2>📊 لوحة تحكم المدير</h2>
+  <table id="usersTable">
+    <thead>
+      <tr>
+        <th>الاسم</th>
+        <th>الإيميل</th>
+        <th>الرصيد</th>
+        <th>الاشتراك</th>
+        <th>حالة البوت</th>
+        <th>الإجراءات</th>
+      </tr>
+    </thead>
+    <tbody id="usersBody"></tbody>
+  </table>
 </body>
 </html>
