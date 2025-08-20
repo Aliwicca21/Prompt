@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تفاصيل بوت المستخدم</title>
+  <style>
+    body { font-family: Tahoma, Arial; direction: rtl; background: #f4f4f9; margin: 20px; }
+    h2 { text-align: center; color: #333; }
+    .card { background: white; padding: 20px; border-radius: 10px; box-shadow: 0 2px 8px rgba(0,0,0,0.2); margin-bottom: 20px; }
+    table { width: 100%; border-collapse: collapse; margin-top: 10px; }
+    table th, table td { border: 1px solid #ddd; padding: 10px; text-align: center; }
+    table th { background-color: #0070ba; color: white; }
+    button { padding: 6px 12px; border: none; border-radius: 5px; cursor: pointer; background-color: #28a745; color: white; }
+  </style>
+</head>
+<body>
+  <h2>📊 بيانات البوت للمستخدم</h2>
+  <div class="card">
+    <p><strong>الاسم:</strong> <span id="username">جار التحميل...</span></p>
+    <p><strong>الإيميل:</strong> <span id="email">جار التحميل...</span></p>
+    <p><strong>تليجرام:</strong> <span id="telegram_id">جار التحميل...</span></p>
+    <p><strong>الرصيد:</strong> <span id="balance">جار التحميل...</span></p>
+    <p><strong>حالة البوت:</strong> <span id="bot-status">جار التحميل...</span></p>
+    <p><strong>عدد الجروبات:</strong> <span id="groups-count">جار التحميل...</span></p>
+    <p><strong>وقت تشغيل البوت:</strong> <span id="bot-timer">جار التحميل...</span></p>
+  </div>
+
+  <div class="card">
+    <h3>📁 بيانات الجروبات</h3>
+    <table>
+      <thead>
+        <tr>
+          <th>اسم الجروب</th>
+          <th>بيانات محفوظة</th>
+        </tr>
+      </thead>
+      <tbody id="groupsBody">
+        <!-- بيانات الجروبات تظهر هنا -->
+      </tbody>
+    </table>
+  </div>
+
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getFirestore, doc, getDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    // 🔹 إعداد Firebase الخاص بيك
+    const firebaseConfig = {
+      apiKey: "AIzaSyBGFMZtSytIPzF4XYLyA34DpF5q_k-UPL8",
+      authDomain: "fir-dba4c.firebaseapp.com",
+      projectId: "fir-dba4c",
+      storageBucket: "fir-dba4c.firebasestorage.app",
+      messagingSenderId: "160255207915",
+      appId: "1:160255207915:web:ce8e69d43f62daf476d1ae",
+      measurementId: "G-GYPNMR85G2"
+    };
+
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+
+    const urlParams = new URLSearchParams(window.location.search);
+    const uid = urlParams.get('uid');
+
+    const usernameEl = document.getElementById("username");
+    const emailEl = document.getElementById("email");
+    const telegramEl = document.getElementById("telegram_id");
+    const balanceEl = document.getElementById("balance");
+    const botStatusEl = document.getElementById("bot-status");
+    const groupsCountEl = document.getElementById("groups-count");
+    const groupsBody = document.getElementById("groupsBody");
+    const botTimerEl = document.getElementById("bot-timer");
+
+    let timerSeconds = 0;
+    let timerInterval;
+
+    async function loadUserBotData() {
+      const userDoc = await getDoc(doc(db, "users", uid));
+      if (!userDoc.exists()) return alert("المستخدم غير موجود!");
+
+      const userData = userDoc.data();
+      usernameEl.textContent = userData.username || "-";
+      emailEl.textContent = userData.email || "-";
+      telegramEl.textContent = userData.telegram_id || "-";
+      balanceEl.textContent = userData.balance || 0;
+      botStatusEl.textContent = userData.botActive ? "✅ مفعل" : "❌ متوقف";
+
+      // جلب بيانات الجروبات
+      const groupsCol = collection(db, `users/${uid}/groups`);
+      const groupsSnap = await getDocs(groupsCol);
+      groupsBody.innerHTML = "";
+      groupsCountEl.textContent = groupsSnap.size;
+
+      groupsSnap.forEach(docSnap => {
+        const group = docSnap.data();
+        const row = document.createElement("tr");
+        row.innerHTML = `
+          <td>${group.name || "-"}</td>
+          <td>${group.data || "-"}</td>
+        `;
+        groupsBody.appendChild(row);
+      });
+
+      // بدء عداد وقت تشغيل البوت
+      if(userData.botActive) startBotTimer();
+    }
+
+    function startBotTimer() {
+      timerInterval = setInterval(() => {
+        timerSeconds++;
+        const hrs = Math.floor(timerSeconds / 3600);
+        const mins = Math.floor((timerSeconds % 3600) / 60);
+        const secs = timerSeconds % 60;
+        botTimerEl.textContent = `${hrs}س ${mins}د ${secs}ث`;
+      }, 1000);
+    }
+
+    loadUserBotData();
+  </script>
+</body>
+</html>
