@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="ar">
+<head>
+  <meta charset="UTF-8">
+  <title>تسجيل دخول المدير</title>
+  <style>
+    body { font-family: Tahoma, Arial; direction: rtl; background: #f4f4f9; display:flex; justify-content:center; align-items:center; height:100vh; }
+    .login-box { background:white; padding:30px; border-radius:10px; box-shadow:0 0 10px rgba(0,0,0,0.2); }
+    input { width:100%; padding:10px; margin:10px 0; border-radius:5px; border:1px solid #ccc; }
+    button { padding:10px 20px; border:none; border-radius:5px; background:#0070ba; color:white; cursor:pointer; }
+  </style>
+</head>
+<body>
+  <div class="login-box">
+    <h2>تسجيل دخول المدير</h2>
+    <input type="text" id="username" placeholder="اسم المستخدم">
+    <input type="password" id="password" placeholder="كلمة المرور">
+    <button onclick="login()">دخول</button>
+  </div>
+
+  <script>
+    // 🔹 بيانات المدير (يمكن تعديلها)
+    const ADMIN_USERNAME = "admin";
+    const ADMIN_PASSWORD = "12345";
+
+    function login() {
+      const user = document.getElementById("username").value;
+      const pass = document.getElementById("password").value;
+
+      if(user === ADMIN_USERNAME && pass === ADMIN_PASSWORD){
+        // حفظ حالة تسجيل الدخول في localStorage
+        localStorage.setItem("isAdmin", "true");
+        window.location.href = "admin_panel.html";
+      } else {
+        alert("اسم المستخدم أو كلمة المرور غير صحيحة!");
+      }
+    }
+  </script>
+</body>
+</html>
